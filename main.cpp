@@ -16,6 +16,9 @@ const char* HEAD_RIGHT = "resources/headRight.png";
 const char* BODY_HORIZONTAL = "resources/bodyHorr.png";
 const char* BODY_VERTICAL = "resources/bodyVert.png";
 
+// Highscore constants
+const char* BACKGROUND_HIGHSCORE = "resources/highBG.png";
+
 // Function prototypes
 int initSDL(SDL_Window **window, SDL_Renderer **renderer);
 SDL_Texture* loadTexture(SDL_Renderer *renderer, const char *filePath);
@@ -23,6 +26,22 @@ SDL_Texture* renderText(SDL_Renderer *renderer, TTF_Font *font, const char *text
 int handleMouseEvent(SDL_Event *e, SDL_Rect *rect);
 void renderInstructions(SDL_Renderer *renderer, SDL_Texture *helpTexture);
 void runSnakeGame(SDL_Renderer *renderer);
+void displayHighscore(SDL_Renderer *renderer, TTF_Font *font);
+
+// Snake game state
+typedef struct {
+    int x, y;
+    int dx, dy;
+    SDL_Texture* headTexture;
+    SDL_Texture* bodyTexture;
+    SDL_Rect segments[100];
+    int length;
+} Snake;
+
+void initSnake(Snake* snake, SDL_Renderer* renderer);
+void updateSnake(Snake* snake);
+void renderSnake(Snake* snake, SDL_Renderer* renderer);
+void handleSnakeEvents(SDL_Event* e, Snake* snake, SDL_Renderer* renderer);
 
 int main(int argc, char* args[]) {
     SDL_Window* window = NULL;
@@ -91,11 +110,15 @@ int main(int argc, char* args[]) {
     int quit = 0;
     int showInstructions = 0;
     int showSnakeGame = 0;
+    int showHighscore = 0;
     int snakeBigPosX = -SCREEN_WIDTH;  // Initial position outside left edge
     int snakeTreePosX = -SCREEN_WIDTH; // Initial position outside left edge
 
     // Event handler
     SDL_Event e;
+
+    // Snake game state
+    Snake snake;
 
     // While application is running
     while (!quit) {
@@ -115,6 +138,11 @@ int main(int argc, char* args[]) {
                 if (handleMouseEvent(&e, &startRect)) {
                     // Show the snake game
                     showSnakeGame = 1;
+                    initSnake(&snake, renderer);
+                }
+                if (handleMouseEvent(&e, &highscoreRect)) {
+                    // Show the highscore
+                    showHighscore = 1;
                 }
             }
             if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
@@ -124,6 +152,13 @@ int main(int argc, char* args[]) {
                 if (showSnakeGame) {
                     showSnakeGame = 0;
                 }
+                if (showHighscore) {
+                    showHighscore = 0;
+                }
+            }
+
+            if (showSnakeGame) {
+                handleSnakeEvents(&e, &snake, renderer);
             }
         }
 
@@ -138,19 +173,19 @@ int main(int argc, char* args[]) {
             SDL_RenderCopy(renderer, gameBackground, NULL, NULL);
             SDL_DestroyTexture(gameBackground);
 
-            // Placeholder for rendering snake
-            SDL_Texture* snakeHeadTexture = loadTexture(renderer, HEAD_RIGHT); // Example: Snake starts with head right
-            SDL_Texture* snakeBodyTexture = loadTexture(renderer, BODY_HORIZONTAL); // Example: Snake body horizontal
+            updateSnake(&snake);
+            renderSnake(&snake, renderer);
+        } else if (showHighscore) {
+            // Render highscore background
+            SDL_Texture* highscoreBackground = loadTexture(renderer, BACKGROUND_HIGHSCORE);
+            SDL_RenderCopy(renderer, highscoreBackground, NULL, NULL);
+            SDL_DestroyTexture(highscoreBackground);
 
-            // Example rendering of snake head and body
-            SDL_Rect snakeHeadRect = {200, 200, 50, 50}; // Example position and size
-            SDL_RenderCopy(renderer, snakeHeadTexture, NULL, &snakeHeadRect);
-
-            SDL_Rect snakeBodyRect = {150, 200, 50, 50}; // Example position and size
-            SDL_RenderCopy(renderer, snakeBodyTexture, NULL, &snakeBodyRect);
-
-            SDL_DestroyTexture(snakeHeadTexture);
-            SDL_DestroyTexture(snakeBodyTexture);
+            // Render highscore text
+            SDL_Rect highscoreTextRect = {220, 270, 0, 0}; // Example position
+            SDL_Texture* highscoreTextTexture = renderText(renderer, font, "HIGHEST SCORE", textColor, &highscoreTextRect);
+            SDL_RenderCopy(renderer, highscoreTextTexture, NULL, &highscoreTextRect);
+            SDL_DestroyTexture(highscoreTextTexture);
         } else {
             // Render main menu
             SDL_RenderCopy(renderer, backgroundTexture, NULL, NULL);
@@ -175,17 +210,17 @@ int main(int argc, char* args[]) {
             }
             SDL_RenderCopy(renderer, startTexture, NULL, &startRect);
 
-            if (instructionsRect.x > 560) {
+            if (instructionsRect.x > 550) {
                 instructionsRect.x -= 6;  // Adjust speed as needed
             }
             SDL_RenderCopy(renderer, instructionsTexture, NULL, &instructionsRect);
 
-            if (highscoreRect.x > 560) {
+            if (highscoreRect.x > 570) {
                 highscoreRect.x -= 7;  // Adjust speed as needed
             }
             SDL_RenderCopy(renderer, highscoreTexture, NULL, &highscoreRect);
 
-            if (exitRect.x > 635) {
+            if (exitRect.x > 640) {
                 exitRect.x -= 8;  // Adjust speed as needed
             }
             SDL_RenderCopy(renderer, exitTexture, NULL, &exitRect);
@@ -195,7 +230,7 @@ int main(int argc, char* args[]) {
         SDL_RenderPresent(renderer);
 
         // Delay to control frame rate
-        SDL_Delay(4);  // Adjust as needed for smoother animation
+        SDL_Delay(10);  // Adjust as needed for smoother animation
     }
 
     // Cleanup resources
@@ -207,9 +242,15 @@ int main(int argc, char* args[]) {
     SDL_DestroyTexture(highscoreTexture);
     SDL_DestroyTexture(exitTexture);
     SDL_DestroyTexture(helpTexture);
+
+    TTF_CloseFont(font);
+    font = NULL;
+
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-    TTF_CloseFont(font);
+    window = NULL;
+    renderer = NULL;
+
     TTF_Quit();
     IMG_Quit();
     SDL_Quit();
@@ -217,112 +258,157 @@ int main(int argc, char* args[]) {
     return 0;
 }
 
-// Function to initialize SDL components
 int initSDL(SDL_Window **window, SDL_Renderer **renderer) {
-    // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-        return 1;
+        return -1;
     }
 
-    // Initialize SDL_image for PNG loading
-    if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) {
+    if (!IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG) {
         printf("SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError());
-        SDL_Quit();
-        return 1;
+        return -1;
     }
 
-    // Initialize SDL_ttf for TrueType font rendering
     if (TTF_Init() == -1) {
         printf("SDL_ttf could not initialize! SDL_ttf Error: %s\n", TTF_GetError());
-        IMG_Quit();
-        SDL_Quit();
-        return 1;
+        return -1;
     }
 
-    // Create window
-    *window = SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                              SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+    *window = SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     if (*window == NULL) {
         printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
-        TTF_Quit();
-        IMG_Quit();
-        SDL_Quit();
-        return 1;
+        return -1;
     }
 
-    // Create renderer for window
     *renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED);
     if (*renderer == NULL) {
         printf("Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
-        SDL_DestroyWindow(*window);
-        TTF_Quit();
-        IMG_Quit();
-        SDL_Quit();
-        return 1;
+        return -1;
     }
 
     return 0;
 }
 
-// Function to load texture from file
 SDL_Texture* loadTexture(SDL_Renderer *renderer, const char *filePath) {
-    SDL_Surface *surface = IMG_Load(filePath);
-    if (surface == NULL) {
+    SDL_Texture* newTexture = NULL;
+    SDL_Surface* loadedSurface = IMG_Load(filePath);
+    if (loadedSurface == NULL) {
         printf("Unable to load image %s! SDL_image Error: %s\n", filePath, IMG_GetError());
-        return NULL;
+    } else {
+        newTexture = SDL_CreateTextureFromSurface(renderer, loadedSurface);
+        if (newTexture == NULL) {
+            printf("Unable to create texture from %s! SDL_Error: %s\n", filePath, SDL_GetError());
+        }
+        SDL_FreeSurface(loadedSurface);
     }
-
-    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_FreeSurface(surface);
-    if (texture == NULL) {
-        printf("Unable to create texture from %s! SDL Error: %s\n", filePath, SDL_GetError());
-        return NULL;
-    }
-
-    return texture;
+    return newTexture;
 }
 
-// Function to render text to a texture
 SDL_Texture* renderText(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color color, SDL_Rect *rect) {
-    SDL_Surface *surface = TTF_RenderText_Solid(font, text, color);
-    if (surface == NULL) {
+    SDL_Surface* textSurface = TTF_RenderText_Solid(font, text, color);
+    if (textSurface == NULL) {
         printf("Unable to render text surface! SDL_ttf Error: %s\n", TTF_GetError());
         return NULL;
     }
 
-    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_FreeSurface(surface);
-    if (texture == NULL) {
-        printf("Unable to create texture from rendered text! SDL Error: %s\n", SDL_GetError());
-        return NULL;
+    SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+    if (textTexture == NULL) {
+        printf("Unable to create texture from rendered text! SDL_Error: %s\n", SDL_GetError());
+    } else {
+        rect->w = textSurface->w;
+        rect->h = textSurface->h;
     }
-
-    // Set width and height of the texture
-    SDL_QueryTexture(texture, NULL, NULL, &rect->w, &rect->h);
-
-    return texture;
+    SDL_FreeSurface(textSurface);
+    return textTexture;
 }
 
-// Function to handle mouse events
 int handleMouseEvent(SDL_Event *e, SDL_Rect *rect) {
     int x, y;
     SDL_GetMouseState(&x, &y);
+
     if (x >= rect->x && x <= rect->x + rect->w && y >= rect->y && y <= rect->y + rect->h) {
         return 1;
     }
     return 0;
 }
 
-// Function to render instructions
 void renderInstructions(SDL_Renderer *renderer, SDL_Texture *helpTexture) {
-    SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, helpTexture, NULL, NULL);
-    SDL_RenderPresent(renderer);
 }
 
-// Function to run the snake game
-void runSnakeGame(SDL_Renderer *renderer) {
-    // Placeholder for the snake game logic
-    SDL_Delay(20);  // Simulate a delay for starting the game
+void initSnake(Snake* snake, SDL_Renderer* renderer) {
+    snake->x = SCREEN_WIDTH / 2;
+    snake->y = SCREEN_HEIGHT / 2;
+    snake->dx = 10;
+    snake->dy = 0;
+    snake->headTexture = loadTexture(renderer, HEAD_RIGHT);
+    snake->bodyTexture = loadTexture(renderer, BODY_HORIZONTAL);
+    snake->length = 5;
+
+    for (int i = 0; i < snake->length; ++i) {
+        snake->segments[i].x = snake->x - i * 10;
+        snake->segments[i].y = snake->y;
+        snake->segments[i].w = 10;
+        snake->segments[i].h = 10;
+    }
 }
+
+void updateSnake(Snake* snake) {
+    for (int i = snake->length - 1; i > 0; --i) {
+        snake->segments[i].x = snake->segments[i - 1].x;
+        snake->segments[i].y = snake->segments[i - 1].y;
+    }
+
+    snake->x += snake->dx;
+    snake->y += snake->dy;
+    snake->segments[0].x = snake->x;
+    snake->segments[0].y = snake->y;
+}
+
+void renderSnake(Snake* snake, SDL_Renderer* renderer) {
+    SDL_RenderCopy(renderer, snake->headTexture, NULL, &snake->segments[0]);
+
+    for (int i = 1; i < snake->length; ++i) {
+        SDL_RenderCopy(renderer, snake->bodyTexture, NULL, &snake->segments[i]);
+    }
+}
+
+void handleSnakeEvents(SDL_Event* e, Snake* snake, SDL_Renderer* renderer) {
+    if (e->type == SDL_KEYDOWN) {
+        switch (e->key.keysym.sym) {
+            case SDLK_UP:
+                if (snake->dy == 0) {
+                    snake->dx = 0;
+                    snake->dy = -10;
+                    SDL_DestroyTexture(snake->headTexture);
+                    snake->headTexture = loadTexture(renderer, HEAD_UP);
+                }
+                break;
+            case SDLK_DOWN:
+                if (snake->dy == 0) {
+                    snake->dx = 0;
+                    snake->dy = 10;
+                    SDL_DestroyTexture(snake->headTexture);
+                    snake->headTexture = loadTexture(renderer, HEAD_DOWN);
+                }
+                break;
+            case SDLK_LEFT:
+                if (snake->dx == 0) {
+                    snake->dx = -10;
+                    snake->dy = 0;
+                    SDL_DestroyTexture(snake->headTexture);
+                    snake->headTexture = loadTexture(renderer, HEAD_LEFT);
+                }
+                break;
+            case SDLK_RIGHT:
+                if (snake->dx == 0) {
+                    snake->dx = 10;
+                    snake->dy = 0;
+                    SDL_DestroyTexture(snake->headTexture);
+                    snake->headTexture = loadTexture(renderer, HEAD_RIGHT);
+                }
+                break;
+        }
+    }
+}
+
