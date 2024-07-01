@@ -7,6 +7,15 @@
 const int SCREEN_WIDTH = 960;
 const int SCREEN_HEIGHT = 600;
 
+// Snake game constants
+const char* BACKGROUND_GAME = "resources/bgS.png";
+const char* HEAD_UP = "resources/headUp.png";
+const char* HEAD_DOWN = "resources/headDown.png";
+const char* HEAD_LEFT = "resources/headLeft.png";
+const char* HEAD_RIGHT = "resources/headRight.png";
+const char* BODY_HORIZONTAL = "resources/bodyHorr.png";
+const char* BODY_VERTICAL = "resources/bodyVert.png";
+
 // Function prototypes
 int initSDL(SDL_Window **window, SDL_Renderer **renderer);
 SDL_Texture* loadTexture(SDL_Renderer *renderer, const char *filePath);
@@ -81,6 +90,7 @@ int main(int argc, char* args[]) {
     // Main loop flag
     int quit = 0;
     int showInstructions = 0;
+    int showSnakeGame = 0;
     int snakeBigPosX = -SCREEN_WIDTH;  // Initial position outside left edge
     int snakeTreePosX = -SCREEN_WIDTH; // Initial position outside left edge
 
@@ -103,13 +113,16 @@ int main(int argc, char* args[]) {
                     showInstructions = 1;
                 }
                 if (handleMouseEvent(&e, &startRect)) {
-                    // Start the snake game
-                    runSnakeGame(renderer);
+                    // Show the snake game
+                    showSnakeGame = 1;
                 }
             }
             if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
                 if (showInstructions) {
                     showInstructions = 0;
+                }
+                if (showSnakeGame) {
+                    showSnakeGame = 0;
                 }
             }
         }
@@ -119,8 +132,27 @@ int main(int argc, char* args[]) {
 
         if (showInstructions) {
             renderInstructions(renderer, helpTexture);
+        } else if (showSnakeGame) {
+            // Render snake game background
+            SDL_Texture* gameBackground = loadTexture(renderer, BACKGROUND_GAME);
+            SDL_RenderCopy(renderer, gameBackground, NULL, NULL);
+            SDL_DestroyTexture(gameBackground);
+
+            // Placeholder for rendering snake
+            SDL_Texture* snakeHeadTexture = loadTexture(renderer, HEAD_RIGHT); // Example: Snake starts with head right
+            SDL_Texture* snakeBodyTexture = loadTexture(renderer, BODY_HORIZONTAL); // Example: Snake body horizontal
+
+            // Example rendering of snake head and body
+            SDL_Rect snakeHeadRect = {200, 200, 50, 50}; // Example position and size
+            SDL_RenderCopy(renderer, snakeHeadTexture, NULL, &snakeHeadRect);
+
+            SDL_Rect snakeBodyRect = {150, 200, 50, 50}; // Example position and size
+            SDL_RenderCopy(renderer, snakeBodyTexture, NULL, &snakeBodyRect);
+
+            SDL_DestroyTexture(snakeHeadTexture);
+            SDL_DestroyTexture(snakeBodyTexture);
         } else {
-            // Render background texture
+            // Render main menu
             SDL_RenderCopy(renderer, backgroundTexture, NULL, NULL);
 
             // Render snakeBig texture gradually
@@ -292,5 +324,5 @@ void renderInstructions(SDL_Renderer *renderer, SDL_Texture *helpTexture) {
 // Function to run the snake game
 void runSnakeGame(SDL_Renderer *renderer) {
     // Placeholder for the snake game logic
-    SDL_Delay(2000);  // Simulate a delay for starting the game
+    SDL_Delay(20);  // Simulate a delay for starting the game
 }
