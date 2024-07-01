@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 25000 * 1024) < 0) {
         printf("SDL_mixer could not initialize! Mix_Error: %s\n", Mix_GetError());
         TTF_Quit();
         IMG_Quit();
