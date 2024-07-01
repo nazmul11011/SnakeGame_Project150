@@ -240,7 +240,7 @@ int main(int argc, char *argv[]) {
             renderText(renderer, grobold, "INSTRUCTIONS", white, 300, 220);
             renderText(renderer, grobold, "HIGHSCORE", white, 320, 300);
             renderText(renderer, grobold, "EXIT", white, 360, 380);
-            renderText(renderer, gothic, "Developed By KhanShaheb", white, 350, 560);
+            renderText(renderer, gothic, "Developed By NazmulAlam", white, 350, 560);
         } else if (gameState == 1) {
             // Render game playing state
         } else if (gameState == 2) {
