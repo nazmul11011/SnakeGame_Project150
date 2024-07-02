@@ -537,8 +537,8 @@ int isGameOver(Snake* snake) {
 
 void generateFood(Food* food) {
     // Generate random positions for food within the game screen
-    food->x = rand() % (SCREEN_WIDTH - food->rect.w);
-    food->y = rand() % (SCREEN_HEIGHT - food->rect.h);
+    food->x = 15 + rand() % (929 - 15 - food->rect.w);  // Adjusted for x-axis within the specified range
+    food->y = 15 + rand() % (529 - 15 - food->rect.h);  // Adjusted for y-axis within the specified range
     // Adjust to grid for easier handling (optional, depending on game design)
     food->x -= food->x % 10;
     food->y -= food->y % 10;
