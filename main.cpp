@@ -50,6 +50,8 @@ typedef struct {
     int score;
 } Snake;
 
+int selectedMenuItem = 0;  // 0 for START, 1 for INSTRUCTIONS, 2 for HIGH SCORE, 3 for EXIT
+
 void initSnake(Snake* snake, SDL_Renderer* renderer);
 void updateSnake(Snake* snake, Food* food);
 void renderSnake(Snake* snake, SDL_Renderer* renderer);
@@ -169,25 +171,45 @@ int main(int argc, char* args[]) {
                 quit = 1;
             }
 
-            // Handle mouse events
-            if (e.type == SDL_MOUSEBUTTONDOWN) {
-                if (handleMouseEvent(&e, &exitRect)) {
-                    quit = 1;
-                }
-                if (handleMouseEvent(&e, &instructionsRect)) {
-                    showInstructions = 1;
-                }
-                if (handleMouseEvent(&e, &startRect)) {
-                    // Show the snake game
-                    showSnakeGame = 1;
-                    initSnake(&snake, renderer);
-                    generateFood(&food);  // Generate initial food
-                }
-                if (handleMouseEvent(&e, &highscoreRect)) {
-                    // Show the highscore
-                    showHighscore = 1;
-                }
+            // Handle key events for menu selection
+        if (e.type == SDL_KEYDOWN) {
+            switch (e.key.keysym.sym) {
+                case SDLK_w:  // Move selection up
+                    selectedMenuItem--;
+                    if (selectedMenuItem < 0) {
+                        selectedMenuItem = 3;  // Wrap around to the last item
+                    }
+                    break;
+                case SDLK_s:  // Move selection down
+                    selectedMenuItem++;
+                    if (selectedMenuItem > 3) {
+                        selectedMenuItem = 0;  // Wrap around to the first item
+                    }
+                    break;
+                case SDLK_RETURN:  // Enter key to select current item
+                    switch (selectedMenuItem) {
+                        case 0:  // START selected
+                            showSnakeGame = 1;
+                            initSnake(&snake, renderer);
+                            generateFood(&food);
+                            break;
+                        case 1:  // INSTRUCTIONS selected
+                            showInstructions = 1;
+                            break;
+                        case 2:  // HIGH SCORE selected
+                            showHighscore = 1;
+                            break;
+                        case 3:  // EXIT selected
+                            quit = 1;
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                default:
+                    break;
             }
+        }
 
             // Handle key events
             if (showSnakeGame) {
@@ -254,6 +276,23 @@ int main(int argc, char* args[]) {
     } else {
         // Render main menu
         SDL_RenderCopy(renderer, backgroundTexture, NULL, NULL);
+
+        // Render menu items
+        SDL_Rect menuRect = {SCREEN_WIDTH, 140, 0, 0};
+        SDL_Texture* menuTextures[4] = {startTexture, instructionsTexture, highscoreTexture, exitTexture};
+
+        for (int i = 0; i < 4; ++i) {
+            menuRect.y = 140 + i * 80;  // Adjust vertical spacing as needed
+            if (i == selectedMenuItem) {
+            // Highlight selected item
+            SDL_SetTextureColorMod(menuTextures[i], 218, 200, 188);  // Example: Red color for selected item
+            } else {
+            // Normal color for other items
+            SDL_SetTextureColorMod(menuTextures[i], 255, 255, 255);  // Example: White color
+            }
+            SDL_RenderCopy(renderer, menuTextures[i], NULL, &menuRect);
+        }
+
 
         // Render snakeBig texture gradually
         if (snakeBigPosX < 0) {
