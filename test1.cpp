@@ -7,6 +7,16 @@
 const int SCREEN_WIDTH = 960;
 const int SCREEN_HEIGHT = 600;
 
+const int SCREEN_FPS = 120;
+const int SCREEN_TICK_PER_FRAME = 1000 / SCREEN_FPS;
+
+void capFrameRate(Uint32 startTicks) {
+    Uint32 frameTicks = SDL_GetTicks() - startTicks;
+    if (frameTicks < SCREEN_TICK_PER_FRAME) {
+        SDL_Delay(SCREEN_TICK_PER_FRAME - frameTicks);
+    }
+}
+
 // Snake game constants
 const char* BACKGROUND_GAME = "resources/bgS.png";
 const char* HEAD_UP = "resources/headUp.png";
@@ -62,6 +72,7 @@ int checkCollision(Snake* snake, Food* food);
 void renderFood(Food* food, SDL_Renderer* renderer);
 
 int main(int argc, char* args[]) {
+    Uint32 startTicks;
     SDL_Window* window = NULL;
     SDL_Renderer* renderer = NULL;
     SDL_Texture* backgroundTexture = NULL;
@@ -108,9 +119,24 @@ int main(int argc, char* args[]) {
         SDL_Quit();
         return 1;
     }
-    TTF_Font* gothicFont = TTF_OpenFont("resources/gothic.ttf", 20);
+    TTF_Font* gothicFont = TTF_OpenFont("resources/gothic.ttf", 22);
     if (gothicFont == NULL) {
     printf("Failed to load gothic font! SDL_ttf Error: %s\n", TTF_GetError());
+        SDL_DestroyTexture(backgroundTexture);
+        SDL_DestroyTexture(snakeBigTexture);
+        SDL_DestroyTexture(snakeTreeTexture);
+        SDL_DestroyTexture(helpTexture);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        TTF_Quit();
+        IMG_Quit();
+        SDL_Quit();
+        return 1;
+    }
+    // Load the larger font for "SNAKE GAME"
+    TTF_Font* largeFont = TTF_OpenFont("resources/grobold.ttf", 60);
+    if (largeFont == NULL) {
+    printf("Failed to load large font! SDL_ttf Error: %s\n", TTF_GetError());
         SDL_DestroyTexture(backgroundTexture);
         SDL_DestroyTexture(snakeBigTexture);
         SDL_DestroyTexture(snakeTreeTexture);
@@ -127,6 +153,11 @@ int main(int argc, char* args[]) {
     SDL_Color textColorWhite = {255, 255, 255}; // White color
     SDL_Color textColorGreen = {121, 175, 107}; // Green color
     SDL_Color textColorRed = {255, 0, 0, 255}; // Red color
+    SDL_Color textColorBlue = {93, 93, 173}; // blue color
+
+    // Render "SNAKE GAME" text
+    SDL_Rect snakeGameRect = {482, 62, 0, 0}; // Adjust position as needed
+    SDL_Texture* snakeGameTexture = renderText(renderer, largeFont, "SNAKE GAME", textColorBlue, &snakeGameRect);
 
     SDL_Rect startRect = {SCREEN_WIDTH, 140, 0, 0};
     startTexture = renderText(renderer, font, "START", textColorGreen, &startRect);
@@ -164,6 +195,7 @@ int main(int argc, char* args[]) {
 
     // While application is running
     while (!quit) {
+        startTicks = SDL_GetTicks();
         // Handle events on queue
         while (SDL_PollEvent(&e) != 0) {
             // User requests quit
@@ -174,13 +206,13 @@ int main(int argc, char* args[]) {
             // Handle key events for menu selection
         if (e.type == SDL_KEYDOWN) {
             switch (e.key.keysym.sym) {
-                case SDLK_w:  // Move selection up
+                case SDLK_UP:  // Move selection up
                     selectedMenuItem--;
                     if (selectedMenuItem < 0) {
                         selectedMenuItem = 3;  // Wrap around to the last item
                     }
                     break;
-                case SDLK_s:  // Move selection down
+                case SDLK_DOWN:  // Move selection down
                     selectedMenuItem++;
                     if (selectedMenuItem > 3) {
                         selectedMenuItem = 0;  // Wrap around to the first item
@@ -240,7 +272,7 @@ int main(int argc, char* args[]) {
             // Check for collision with food
             if (showSnakeGame && checkCollision(&snake, &food)) {
                 snake.length += 2;  // Increase snake's length or update score
-                snake.score += 10;  // Increase score when snake eats food
+                snake.score += 1;  // Increase score when snake eats food
                 generateFood(&food);  // Generate new food
             }
 
@@ -258,7 +290,7 @@ int main(int argc, char* args[]) {
             // Render score
         char scoreText[50];
         sprintf(scoreText, "Score: %d", snake.score);
-        SDL_Rect scoreRect = { 20, 570, 0, 0 }; // Adjust position as needed
+        SDL_Rect scoreRect = { 20, 565, 0, 0 }; // Adjust position as needed
         SDL_Texture* scoreTexture = renderText(renderer, gothicFont, scoreText, textColorRed, &scoreRect);
         SDL_RenderCopy(renderer, scoreTexture, NULL, &scoreRect);
         SDL_DestroyTexture(scoreTexture);
@@ -285,14 +317,13 @@ int main(int argc, char* args[]) {
             menuRect.y = 140 + i * 80;  // Adjust vertical spacing as needed
             if (i == selectedMenuItem) {
             // Highlight selected item
-            SDL_SetTextureColorMod(menuTextures[i], 218, 200, 188);  // Example: Red color for selected item
+            SDL_SetTextureColorMod(menuTextures[i], 218, 200, 188);  // Green color for selected item
             } else {
             // Normal color for other items
-            SDL_SetTextureColorMod(menuTextures[i], 255, 255, 255);  // Example: White color
+            SDL_SetTextureColorMod(menuTextures[i], 255, 255, 255);  // Light green color
             }
             SDL_RenderCopy(renderer, menuTextures[i], NULL, &menuRect);
         }
-
 
         // Render snakeBig texture gradually
         if (snakeBigPosX < 0) {
@@ -328,13 +359,16 @@ int main(int argc, char* args[]) {
             exitRect.x -= 5;  // Adjust speed as needed
         }
         SDL_RenderCopy(renderer, exitTexture, NULL, &exitRect);
+
+        // Render "SNAKE GAME" text on top of "START"
+        SDL_RenderCopy(renderer, snakeGameTexture, NULL, &snakeGameRect);
     }
 
     // Update screen
     SDL_RenderPresent(renderer);
 
-    // Delay to control frame rate
-    SDL_Delay(5); // Adjust delay as needed
+    // Cap frame rate
+    capFrameRate(startTicks);
 
     // Check game over condition
     if (showSnakeGame && isGameOver(&snake)) {
@@ -356,6 +390,8 @@ SDL_DestroyTexture(instructionsTexture);
 SDL_DestroyTexture(highscoreTexture);
 SDL_DestroyTexture(exitTexture);
 SDL_DestroyTexture(helpTexture);
+SDL_DestroyTexture(snakeGameTexture);
+TTF_CloseFont(largeFont);
 TTF_CloseFont(font);
 TTF_CloseFont(gothicFont);
 SDL_DestroyRenderer(renderer);
@@ -449,13 +485,6 @@ SDL_Texture* renderText(SDL_Renderer *renderer, TTF_Font *font, const char *text
     SDL_FreeSurface(surface);
 
     return texture;
-}
-
-// Function to handle mouse click events
-int handleMouseEvent(SDL_Event *e, SDL_Rect *rect) {
-    int mouseX, mouseY;
-    SDL_GetMouseState(&mouseX, &mouseY);
-    return (mouseX >= rect->x && mouseX <= rect->x + rect->w && mouseY >= rect->y && mouseY <= rect->y + rect->h && e->type == SDL_MOUSEBUTTONDOWN);
 }
 
 // Function to render instructions
