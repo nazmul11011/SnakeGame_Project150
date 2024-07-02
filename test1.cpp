@@ -93,8 +93,6 @@ int main(int argc, char* args[]) {
 
     // Load font
     font = TTF_OpenFont("resources/grobold.ttf", 40);
-    TTF_Font* gothicFont20 = loadFont("resources/gothic.ttf", 20);
-
     if (font == NULL) {
         printf("Failed to load font! SDL_ttf Error: %s\n", TTF_GetError());
         SDL_DestroyTexture(backgroundTexture);
@@ -108,21 +106,37 @@ int main(int argc, char* args[]) {
         SDL_Quit();
         return 1;
     }
+    TTF_Font* gothicFont = TTF_OpenFont("resources/gothic.ttf", 20);
+    if (gothicFont == NULL) {
+    printf("Failed to load gothic font! SDL_ttf Error: %s\n", TTF_GetError());
+        SDL_DestroyTexture(backgroundTexture);
+        SDL_DestroyTexture(snakeBigTexture);
+        SDL_DestroyTexture(snakeTreeTexture);
+        SDL_DestroyTexture(helpTexture);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        TTF_Quit();
+        IMG_Quit();
+        SDL_Quit();
+        return 1;
+    }
 
     // Render texts
-    SDL_Color textColor = {255, 255, 255}; // White color
+    SDL_Color textColorWhite = {255, 255, 255}; // White color
+    SDL_Color textColorGreen = {121, 175, 107}; // Green color
+    SDL_Color textColorRed = {255, 0, 0, 255}; // Red color
 
     SDL_Rect startRect = {SCREEN_WIDTH, 140, 0, 0};
-    startTexture = renderText(renderer, font, "START", textColor, &startRect);
+    startTexture = renderText(renderer, font, "START", textColorGreen, &startRect);
 
     SDL_Rect instructionsRect = {SCREEN_WIDTH, 220, 0, 0};
-    instructionsTexture = renderText(renderer, font, "INSTRUCTIONS", textColor, &instructionsRect);
+    instructionsTexture = renderText(renderer, font, "INSTRUCTIONS", textColorGreen, &instructionsRect);
 
     SDL_Rect highscoreRect = {SCREEN_WIDTH, 300, 0, 0};
-    highscoreTexture = renderText(renderer, font, "HIGHSCORE", textColor, &highscoreRect);
+    highscoreTexture = renderText(renderer, font, "HIGHSCORE", textColorGreen, &highscoreRect);
 
     SDL_Rect exitRect = {SCREEN_WIDTH, 380, 0, 0};
-    exitTexture = renderText(renderer, font, "EXIT", textColor, &exitRect);
+    exitTexture = renderText(renderer, font, "EXIT", textColorGreen, &exitRect);
 
     // Main loop flag
     int quit = 0;
@@ -222,8 +236,8 @@ int main(int argc, char* args[]) {
             // Render score
         char scoreText[50];
         sprintf(scoreText, "Score: %d", snake.score);
-        SDL_Rect scoreRect = { 20, 560, 0, 0 }; // Adjust position as needed
-        SDL_Texture* scoreTexture = renderText(renderer, font, scoreText, textColor, &scoreRect);
+        SDL_Rect scoreRect = { 20, 570, 0, 0 }; // Adjust position as needed
+        SDL_Texture* scoreTexture = renderText(renderer, gothicFont, scoreText, textColorRed, &scoreRect);
         SDL_RenderCopy(renderer, scoreTexture, NULL, &scoreRect);
         SDL_DestroyTexture(scoreTexture);
     } else if (showHighscore) {
@@ -234,7 +248,7 @@ int main(int argc, char* args[]) {
 
         // Render highscore text
         SDL_Rect highscoreTextRect = {220, 270, 0, 0}; // Example position
-        SDL_Texture* highscoreTextTexture = renderText(renderer, font, "HIGHEST SCORE", textColor, &highscoreTextRect);
+        SDL_Texture* highscoreTextTexture = renderText(renderer, font, "HIGHEST SCORE", textColorWhite, &highscoreTextRect);
         SDL_RenderCopy(renderer, highscoreTextTexture, NULL, &highscoreTextRect);
         SDL_DestroyTexture(highscoreTextTexture);
     } else {
@@ -304,6 +318,7 @@ SDL_DestroyTexture(highscoreTexture);
 SDL_DestroyTexture(exitTexture);
 SDL_DestroyTexture(helpTexture);
 TTF_CloseFont(font);
+TTF_CloseFont(gothicFont);
 SDL_DestroyRenderer(renderer);
 SDL_DestroyWindow(window);
 TTF_Quit();
@@ -574,13 +589,4 @@ int checkCollision(Snake* snake, Food* food) {
 void renderFood(Food* food, SDL_Renderer* renderer) {
     SDL_Rect destRect = { food->x, food->y, food->rect.w, food->rect.h };
     SDL_RenderCopy(renderer, food->texture, NULL, &destRect);
-}
-
-TTF_Font* loadFont(const char* fontPath, int fontSize) {
-    TTF_Font* font = TTF_OpenFont(fontPath, fontSize);
-    if (!font) {
-        fprintf(stderr, "Error: Failed to load font '%s'. %s\n", fontPath, TTF_GetError());
-        // Handle error: Maybe fallback to default font or exit the program
-    }
-    return font;
 }
