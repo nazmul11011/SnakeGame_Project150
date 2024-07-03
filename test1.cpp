@@ -40,6 +40,8 @@ SDL_Texture* renderText(SDL_Renderer *renderer, TTF_Font *font, const char *text
 void renderInstructions(SDL_Renderer *renderer, SDL_Texture *helpTexture);
 void runSnakeGame(SDL_Renderer *renderer);
 void displayHighscore(SDL_Renderer *renderer, TTF_Font *font);
+void loadHighScore(const char *filePath);
+void saveHighScore(const char *filePath);
 
 // Snake game state
 typedef struct {
@@ -59,6 +61,7 @@ typedef struct {
     int score;
 } Snake;
 
+int highScore = 0;
 int selectedMenuItem = 0;  // 0 for START, 1 for INSTRUCTIONS, 2 for HIGH SCORE, 3 for EXIT
 
 void initSnake(Snake* snake, SDL_Renderer* renderer);
@@ -92,6 +95,9 @@ int main(int argc, char* args[]) {
     if (initSDL(&window, &renderer) != 0) {
         return 1;
     }
+
+    // Load the high score at the start of the program
+    loadHighScore("resources/highscore.txt");
 
     // Load textures
     gameOverTexture = IMG_LoadTexture(renderer, "resources/overBG.png");
@@ -239,6 +245,7 @@ int main(int argc, char* args[]) {
                 if (showHighscore) {
                     showHighscore = 0;
                 }
+                selectedMenuItem = 0;
             }
         }
 
@@ -270,10 +277,17 @@ int main(int argc, char* args[]) {
             // Render score
             char scoreText[50];
             sprintf(scoreText, "Score: %d", snake.score);
-            SDL_Rect scoreRect = { 20, 565, 0, 0 }; // Adjust position as needed
+            SDL_Rect scoreRect = { 10, 565, 0, 0 }; // Adjust position as needed
             SDL_Texture* scoreTexture = renderText(renderer, gothicFont, scoreText, textColorRed, &scoreRect);
             SDL_RenderCopy(renderer, scoreTexture, NULL, &scoreRect);
             SDL_DestroyTexture(scoreTexture);
+
+            char highscoreText[50];
+            sprintf(highscoreText, "Highscore: %d", highScore);
+            SDL_Rect highscoreTextRect = {800, 565, 0, 0}; // Example position
+            SDL_Texture* highscoreTextTexture = renderText(renderer, gothicFont, highscoreText, textColorRed, &highscoreTextRect);
+            SDL_RenderCopy(renderer, highscoreTextTexture, NULL, &highscoreTextRect);
+            SDL_DestroyTexture(highscoreTextTexture);
         } else if (showHighscore) {
             // Render highscore background
             SDL_Texture* highscoreBackground = loadTexture(renderer, BACKGROUND_HIGHSCORE);
@@ -281,8 +295,10 @@ int main(int argc, char* args[]) {
             SDL_DestroyTexture(highscoreBackground);
 
             // Render highscore text
-            SDL_Rect highscoreTextRect = {220, 270, 0, 0}; // Example position
-            SDL_Texture* highscoreTextTexture = renderText(renderer, font, "HIGHEST SCORE", textColorWhite, &highscoreTextRect);
+            char highscoreText[50];
+            sprintf(highscoreText, "Highscore: %d", highScore);
+            SDL_Rect highscoreTextRect = {350, 280, 0, 0}; // Example position
+            SDL_Texture* highscoreTextTexture = renderText(renderer, font, highscoreText, textColorRed, &highscoreTextRect);
             SDL_RenderCopy(renderer, highscoreTextTexture, NULL, &highscoreTextRect);
             SDL_DestroyTexture(highscoreTextTexture);
         } else {
@@ -353,7 +369,12 @@ int main(int argc, char* args[]) {
         // Check game over condition
         if (showSnakeGame && isGameOver(&snake)) {
             gameOver = 1;
-    
+
+            if (snake.score > highScore) {
+                highScore = snake.score;
+                saveHighScore("resources/highscore.txt");
+            }
+
             printf("Game Over! Length of snake: %d\n", snake.length);
             printf("Your score: %d\n", snake.score);  // Print final score
 
@@ -653,8 +674,8 @@ int isGameOver(Snake* snake) {
 
 void generateFood(Food* food) {
     // Generate random positions for food within the game screen
-    food->x = 16 + rand() % (930 - 16 - food->rect.w);  // Adjusted for x-axis within the specified range
-    food->y = 16 + rand() % (530 - 16 - food->rect.h);  // Adjusted for y-axis within the specified range
+    food->x = 16 + rand() % (928 - 16 - food->rect.w);  // Adjusted for x-axis within the specified range
+    food->y = 16 + rand() % (528 - 16 - food->rect.h);  // Adjusted for y-axis within the specified range
     // Adjust to grid for easier handling (optional, depending on game design)
     food->x -= food->x % 10;
     food->y -= food->y % 10;
@@ -674,4 +695,24 @@ int checkCollision(Snake* snake, Food* food) {
 void renderFood(Food* food, SDL_Renderer* renderer) {
     SDL_Rect destRect = { food->x, food->y, food->rect.w, food->rect.h };
     SDL_RenderCopy(renderer, food->texture, NULL, &destRect);
+}
+
+void loadHighScore(const char *filePath) {
+    FILE *file = fopen(filePath, "r");
+    if (file == NULL) {
+        printf("Could not open high score file for reading: %s\n", filePath);
+        return;
+    }
+    fscanf(file, "%d", &highScore);
+    fclose(file);
+}
+
+void saveHighScore(const char *filePath) {
+    FILE *file = fopen(filePath, "w");
+    if (file == NULL) {
+        printf("Could not open high score file for writing: %s\n", filePath);
+        return;
+    }
+    fprintf(file, "%d", highScore);
+    fclose(file);
 }
