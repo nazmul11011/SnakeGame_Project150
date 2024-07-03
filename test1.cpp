@@ -37,7 +37,6 @@ const char* BACKGROUND_HIGHSCORE = "resources/highBG.png";
 int initSDL(SDL_Window **window, SDL_Renderer **renderer);
 SDL_Texture* loadTexture(SDL_Renderer *renderer, const char *filePath);
 SDL_Texture* renderText(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color color, SDL_Rect *rect);
-int handleMouseEvent(SDL_Event *e, SDL_Rect *rect);
 void renderInstructions(SDL_Renderer *renderer, SDL_Texture *helpTexture);
 void runSnakeGame(SDL_Renderer *renderer);
 void displayHighscore(SDL_Renderer *renderer, TTF_Font *font);
@@ -76,6 +75,7 @@ int main(int argc, char* args[]) {
     SDL_Window* window = NULL;
     SDL_Renderer* renderer = NULL;
     SDL_Texture* backgroundTexture = NULL;
+    SDL_Texture* gameOverTexture = NULL;
     SDL_Texture* snakeBigTexture = NULL;
     SDL_Texture* snakeTreeTexture = NULL;
     SDL_Texture* startTexture = NULL;
@@ -84,6 +84,9 @@ int main(int argc, char* args[]) {
     SDL_Texture* exitTexture = NULL;
     SDL_Texture* helpTexture = NULL;
     TTF_Font* font = NULL;
+    TTF_Font* gothicFont = NULL;
+    TTF_Font* gothicFontLarge = NULL;
+    TTF_Font* largeFont = NULL;
 
     // Initialize SDL
     if (initSDL(&window, &renderer) != 0) {
@@ -91,11 +94,13 @@ int main(int argc, char* args[]) {
     }
 
     // Load textures
+    gameOverTexture = IMG_LoadTexture(renderer, "resources/overBG.png");
     backgroundTexture = loadTexture(renderer, "resources/bg.png");
     snakeBigTexture = loadTexture(renderer, "resources/snakeBig.png");
     snakeTreeTexture = loadTexture(renderer, "resources/snakeTree.png");
     helpTexture = loadTexture(renderer, "resources/help.png");
-    if (backgroundTexture == NULL || snakeBigTexture == NULL || snakeTreeTexture == NULL || helpTexture == NULL) {
+    if (backgroundTexture == NULL || snakeBigTexture == NULL || snakeTreeTexture == NULL || helpTexture == NULL || gameOverTexture == NULL) {
+        printf("Failed to load texture: %s\n", SDL_GetError());
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         TTF_Quit();
@@ -105,38 +110,12 @@ int main(int argc, char* args[]) {
     }
 
     // Load font
+    largeFont = TTF_OpenFont("resources/omega-ruby.ttf", 80); // Load the larger font for "SNAKE GAME"
+    gothicFont = TTF_OpenFont("resources/gothic.ttf", 22);
+    gothicFontLarge = TTF_OpenFont("resources/gothic.ttf", 40);
     font = TTF_OpenFont("resources/grobold.ttf", 40);
-    if (font == NULL) {
+    if (font == NULL || largeFont == NULL || gothicFont == NULL || gothicFontLarge == NULL) {
         printf("Failed to load font! SDL_ttf Error: %s\n", TTF_GetError());
-        SDL_DestroyTexture(backgroundTexture);
-        SDL_DestroyTexture(snakeBigTexture);
-        SDL_DestroyTexture(snakeTreeTexture);
-        SDL_DestroyTexture(helpTexture);
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        TTF_Quit();
-        IMG_Quit();
-        SDL_Quit();
-        return 1;
-    }
-    TTF_Font* gothicFont = TTF_OpenFont("resources/gothic.ttf", 22);
-    if (gothicFont == NULL) {
-    printf("Failed to load gothic font! SDL_ttf Error: %s\n", TTF_GetError());
-        SDL_DestroyTexture(backgroundTexture);
-        SDL_DestroyTexture(snakeBigTexture);
-        SDL_DestroyTexture(snakeTreeTexture);
-        SDL_DestroyTexture(helpTexture);
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        TTF_Quit();
-        IMG_Quit();
-        SDL_Quit();
-        return 1;
-    }
-    // Load the larger font for "SNAKE GAME"
-    TTF_Font* largeFont = TTF_OpenFont("resources/grobold.ttf", 60);
-    if (largeFont == NULL) {
-    printf("Failed to load large font! SDL_ttf Error: %s\n", TTF_GetError());
         SDL_DestroyTexture(backgroundTexture);
         SDL_DestroyTexture(snakeBigTexture);
         SDL_DestroyTexture(snakeTreeTexture);
@@ -156,7 +135,7 @@ int main(int argc, char* args[]) {
     SDL_Color textColorBlue = {93, 93, 173}; // blue color
 
     // Render "SNAKE GAME" text
-    SDL_Rect snakeGameRect = {482, 62, 0, 0}; // Adjust position as needed
+    SDL_Rect snakeGameRect = {480, 62, 0, 0}; // Adjust position as needed
     SDL_Texture* snakeGameTexture = renderText(renderer, largeFont, "SNAKE GAME", textColorBlue, &snakeGameRect);
 
     SDL_Rect startRect = {SCREEN_WIDTH, 140, 0, 0};
@@ -178,6 +157,7 @@ int main(int argc, char* args[]) {
     int showHighscore = 0;
     int snakeBigPosX = -SCREEN_WIDTH;  // Initial position outside left edge
     int snakeTreePosX = -SCREEN_WIDTH; // Initial position outside left edge
+    int gameOver = 0;  // Flag to control game over state
 
     // Event handler
     SDL_Event e;
@@ -204,44 +184,44 @@ int main(int argc, char* args[]) {
             }
 
             // Handle key events for menu selection
-        if (e.type == SDL_KEYDOWN) {
-            switch (e.key.keysym.sym) {
-                case SDLK_UP:  // Move selection up
-                    selectedMenuItem--;
-                    if (selectedMenuItem < 0) {
-                        selectedMenuItem = 3;  // Wrap around to the last item
-                    }
-                    break;
-                case SDLK_DOWN:  // Move selection down
-                    selectedMenuItem++;
-                    if (selectedMenuItem > 3) {
-                        selectedMenuItem = 0;  // Wrap around to the first item
-                    }
-                    break;
-                case SDLK_RETURN:  // Enter key to select current item
-                    switch (selectedMenuItem) {
-                        case 0:  // START selected
-                            showSnakeGame = 1;
-                            initSnake(&snake, renderer);
-                            generateFood(&food);
-                            break;
-                        case 1:  // INSTRUCTIONS selected
-                            showInstructions = 1;
-                            break;
-                        case 2:  // HIGH SCORE selected
-                            showHighscore = 1;
-                            break;
-                        case 3:  // EXIT selected
-                            quit = 1;
-                            break;
-                        default:
-                            break;
-                    }
-                    break;
-                default:
-                    break;
+            if (e.type == SDL_KEYDOWN) {
+                switch (e.key.keysym.sym) {
+                    case SDLK_UP:  // Move selection up
+                        selectedMenuItem--;
+                        if (selectedMenuItem < 0) {
+                            selectedMenuItem = 3;  // Wrap around to the last item
+                        }
+                        break;
+                    case SDLK_DOWN:  // Move selection down
+                        selectedMenuItem++;
+                        if (selectedMenuItem > 3) {
+                            selectedMenuItem = 0;  // Wrap around to the first item
+                        }
+                        break;
+                    case SDLK_RETURN:  // Enter key to select current item
+                        switch (selectedMenuItem) {
+                            case 0:  // START selected
+                                showSnakeGame = 1;
+                                initSnake(&snake, renderer);
+                                generateFood(&food);
+                                break;
+                            case 1:  // INSTRUCTIONS selected
+                                showInstructions = 1;
+                                break;
+                            case 2:  // HIGH SCORE selected
+                                showHighscore = 1;
+                                break;
+                            case 3:  // EXIT selected
+                                quit = 1;
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    default:
+                        break;
+                }
             }
-        }
 
             // Handle key events
             if (showSnakeGame) {
@@ -268,7 +248,7 @@ int main(int argc, char* args[]) {
         // Update game state and render based on current screen state
         if (showInstructions) {
             renderInstructions(renderer, helpTexture);
-        } else if (showSnakeGame) {
+        } else if (showSnakeGame  && !gameOver) {
             // Check for collision with food
             if (showSnakeGame && checkCollision(&snake, &food)) {
                 snake.length += 2;  // Increase snake's length or update score
@@ -288,119 +268,156 @@ int main(int argc, char* args[]) {
             renderFood(&food, renderer);
 
             // Render score
-        char scoreText[50];
-        sprintf(scoreText, "Score: %d", snake.score);
-        SDL_Rect scoreRect = { 20, 565, 0, 0 }; // Adjust position as needed
-        SDL_Texture* scoreTexture = renderText(renderer, gothicFont, scoreText, textColorRed, &scoreRect);
-        SDL_RenderCopy(renderer, scoreTexture, NULL, &scoreRect);
-        SDL_DestroyTexture(scoreTexture);
-    } else if (showHighscore) {
-        // Render highscore background
-        SDL_Texture* highscoreBackground = loadTexture(renderer, BACKGROUND_HIGHSCORE);
-        SDL_RenderCopy(renderer, highscoreBackground, NULL, NULL);
-        SDL_DestroyTexture(highscoreBackground);
+            char scoreText[50];
+            sprintf(scoreText, "Score: %d", snake.score);
+            SDL_Rect scoreRect = { 20, 565, 0, 0 }; // Adjust position as needed
+            SDL_Texture* scoreTexture = renderText(renderer, gothicFont, scoreText, textColorRed, &scoreRect);
+            SDL_RenderCopy(renderer, scoreTexture, NULL, &scoreRect);
+            SDL_DestroyTexture(scoreTexture);
+        } else if (showHighscore) {
+            // Render highscore background
+            SDL_Texture* highscoreBackground = loadTexture(renderer, BACKGROUND_HIGHSCORE);
+            SDL_RenderCopy(renderer, highscoreBackground, NULL, NULL);
+            SDL_DestroyTexture(highscoreBackground);
 
-        // Render highscore text
-        SDL_Rect highscoreTextRect = {220, 270, 0, 0}; // Example position
-        SDL_Texture* highscoreTextTexture = renderText(renderer, font, "HIGHEST SCORE", textColorWhite, &highscoreTextRect);
-        SDL_RenderCopy(renderer, highscoreTextTexture, NULL, &highscoreTextRect);
-        SDL_DestroyTexture(highscoreTextTexture);
-    } else {
-        // Render main menu
-        SDL_RenderCopy(renderer, backgroundTexture, NULL, NULL);
+            // Render highscore text
+            SDL_Rect highscoreTextRect = {220, 270, 0, 0}; // Example position
+            SDL_Texture* highscoreTextTexture = renderText(renderer, font, "HIGHEST SCORE", textColorWhite, &highscoreTextRect);
+            SDL_RenderCopy(renderer, highscoreTextTexture, NULL, &highscoreTextRect);
+            SDL_DestroyTexture(highscoreTextTexture);
+        } else {
+            // Render main menu
+            SDL_RenderCopy(renderer, backgroundTexture, NULL, NULL);
 
-        // Render menu items
-        SDL_Rect menuRect = {SCREEN_WIDTH, 140, 0, 0};
-        SDL_Texture* menuTextures[4] = {startTexture, instructionsTexture, highscoreTexture, exitTexture};
+            // Render menu items
+            SDL_Rect menuRect = {SCREEN_WIDTH, 140, 0, 0};
+            SDL_Texture* menuTextures[4] = {startTexture, instructionsTexture, highscoreTexture, exitTexture};
 
-        for (int i = 0; i < 4; ++i) {
-            menuRect.y = 140 + i * 80;  // Adjust vertical spacing as needed
-            if (i == selectedMenuItem) {
-            // Highlight selected item
-            SDL_SetTextureColorMod(menuTextures[i], 218, 200, 188);  // Green color for selected item
-            } else {
-            // Normal color for other items
-            SDL_SetTextureColorMod(menuTextures[i], 255, 255, 255);  // Light green color
+            for (int i = 0; i < 4; ++i) {
+                menuRect.y = 140 + i * 80;  // Adjust vertical spacing as needed
+                if (i == selectedMenuItem) {
+                // Highlight selected item
+                SDL_SetTextureColorMod(menuTextures[i], 218, 200, 188);  // Green color for selected item
+                } else {
+                // Normal color for other items
+                SDL_SetTextureColorMod(menuTextures[i], 255, 255, 255);  // Light green color
+                }
+                SDL_RenderCopy(renderer, menuTextures[i], NULL, &menuRect);
             }
-            SDL_RenderCopy(renderer, menuTextures[i], NULL, &menuRect);
-        }
 
-        // Render snakeBig texture gradually
-        if (snakeBigPosX < 0) {
+            // Render snakeBig texture gradually
+            if (snakeBigPosX < 0) {
             snakeBigPosX += 5;  // Adjust speed as needed
-        }
-        SDL_Rect snakeBigRect = {snakeBigPosX, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
-        SDL_RenderCopy(renderer, snakeBigTexture, NULL, &snakeBigRect);
+            }
+            SDL_Rect snakeBigRect = {snakeBigPosX, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+            SDL_RenderCopy(renderer, snakeBigTexture, NULL, &snakeBigRect);
 
-        // Render snakeTree texture gradually
-        if (snakeTreePosX < 0) {
+            // Render snakeTree texture gradually
+            if (snakeTreePosX < 0) {
             snakeTreePosX += 5;  // Adjust speed as needed
-        }
-        SDL_Rect snakeTreeRect = {snakeTreePosX, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
-        SDL_RenderCopy(renderer, snakeTreeTexture, NULL, &snakeTreeRect);
+            }
+            SDL_Rect snakeTreeRect = {snakeTreePosX, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+            SDL_RenderCopy(renderer, snakeTreeTexture, NULL, &snakeTreeRect);
 
-        // Move and render texts sequentially
-        if (startRect.x > 620) {
+            // Move and render texts sequentially
+            if (startRect.x > 620) {
             startRect.x -= 8;  // Adjust speed as needed
-        }
-        SDL_RenderCopy(renderer, startTexture, NULL, &startRect);
+            }
+            SDL_RenderCopy(renderer, startTexture, NULL, &startRect);
 
-        if (instructionsRect.x > 550) {
+            if (instructionsRect.x > 550) {
             instructionsRect.x -= 7;  // Adjust speed as needed
-        }
-        SDL_RenderCopy(renderer, instructionsTexture, NULL, &instructionsRect);
+            }
+            SDL_RenderCopy(renderer, instructionsTexture, NULL, &instructionsRect);
 
-        if (highscoreRect.x > 570) {
+            if (highscoreRect.x > 570) {
             highscoreRect.x -= 6;  // Adjust speed as needed
-        }
-        SDL_RenderCopy(renderer, highscoreTexture, NULL, &highscoreRect);
+            }
+            SDL_RenderCopy(renderer, highscoreTexture, NULL, &highscoreRect);
 
-        if (exitRect.x > 640) {
+            if (exitRect.x > 640) {
             exitRect.x -= 5;  // Adjust speed as needed
+            }
+            SDL_RenderCopy(renderer, exitTexture, NULL, &exitRect);
+
+            // Render "SNAKE GAME" text on top of "START"
+            SDL_RenderCopy(renderer, snakeGameTexture, NULL, &snakeGameRect);
         }
-        SDL_RenderCopy(renderer, exitTexture, NULL, &exitRect);
 
-        // Render "SNAKE GAME" text on top of "START"
-        SDL_RenderCopy(renderer, snakeGameTexture, NULL, &snakeGameRect);
+        // Update screen
+        SDL_RenderPresent(renderer);
+
+        // Cap frame rate
+        capFrameRate(startTicks);
+
+        // Check game over condition
+        if (showSnakeGame && isGameOver(&snake)) {
+            gameOver = 1;
+    
+            printf("Game Over! Length of snake: %d\n", snake.length);
+            printf("Your score: %d\n", snake.score);  // Print final score
+
+            SDL_Delay(1000);
+
+            SDL_RenderClear(renderer);
+            SDL_RenderCopy(renderer, gameOverTexture, NULL, NULL);
+
+            // Render the score on the game over screen
+            char scoreText[50];
+            sprintf(scoreText, "Score: %d", snake.score);
+            SDL_Rect gameOverScoreRect = {400, 300, 0, 0}; // Adjust position as needed
+            SDL_Texture* gameOverScoreTexture = renderText(renderer, gothicFontLarge, scoreText, textColorWhite, &gameOverScoreRect);
+            SDL_RenderCopy(renderer, gameOverScoreTexture, NULL, &gameOverScoreRect);
+            SDL_DestroyTexture(gameOverScoreTexture);
+
+            SDL_RenderPresent(renderer);
+
+            // Wait for Enter or Esc key to restart the game
+            int gameOverHandled = 0;
+            while (!gameOverHandled) {
+                while (SDL_PollEvent(&e)) {
+                    if (e.type == SDL_QUIT) {
+                        quit = 1;
+                        gameOverHandled = 1;
+                    }
+                    if (e.type == SDL_KEYDOWN) {
+                        if (e.key.keysym.sym == SDLK_RETURN || e.key.keysym.sym == SDLK_ESCAPE) {
+                            gameOverHandled = 1;
+                            gameOver = 0;
+                            // Reset the snake for a new game
+                            initSnake(&snake, renderer);
+                            generateFood(&food); // Generate new food for the next game
+                            SDL_Delay(100); // Delay for a moment before restarting
+                        }
+                    }
+                }
+            }
+        }
+
     }
 
-    // Update screen
-    SDL_RenderPresent(renderer);
+    // Free resources and close SDL
+    SDL_DestroyTexture(gameOverTexture);
+    SDL_DestroyTexture(backgroundTexture);
+    SDL_DestroyTexture(snakeBigTexture);
+    SDL_DestroyTexture(snakeTreeTexture);
+    SDL_DestroyTexture(startTexture);
+    SDL_DestroyTexture(instructionsTexture);
+    SDL_DestroyTexture(highscoreTexture);
+    SDL_DestroyTexture(exitTexture);
+    SDL_DestroyTexture(helpTexture);
+    SDL_DestroyTexture(snakeGameTexture);
+    TTF_CloseFont(largeFont);
+    TTF_CloseFont(font);
+    TTF_CloseFont(gothicFont);
+    TTF_CloseFont(gothicFontLarge);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    TTF_Quit();
+    IMG_Quit();
+    SDL_Quit();
 
-    // Cap frame rate
-    capFrameRate(startTicks);
-
-    // Check game over condition
-    if (showSnakeGame && isGameOver(&snake)) {
-        printf("Game Over! Length of snake: %d\n", snake.length);
-        printf("Your score: %d\n", snake.score);  // Print final score
-        // Reset the snake for a new game
-        initSnake(&snake, renderer);
-        generateFood(&food);  // Generate new food for the next game
-        SDL_Delay(1000); // Delay for 1 second before restarting
-    }
-}
-
-// Free resources and close SDL
-SDL_DestroyTexture(backgroundTexture);
-SDL_DestroyTexture(snakeBigTexture);
-SDL_DestroyTexture(snakeTreeTexture);
-SDL_DestroyTexture(startTexture);
-SDL_DestroyTexture(instructionsTexture);
-SDL_DestroyTexture(highscoreTexture);
-SDL_DestroyTexture(exitTexture);
-SDL_DestroyTexture(helpTexture);
-SDL_DestroyTexture(snakeGameTexture);
-TTF_CloseFont(largeFont);
-TTF_CloseFont(font);
-TTF_CloseFont(gothicFont);
-SDL_DestroyRenderer(renderer);
-SDL_DestroyWindow(window);
-TTF_Quit();
-IMG_Quit();
-SDL_Quit();
-
-return 0;
+    return 0;
 }
 
 // Function to initialize SDL and create window and renderer
@@ -505,7 +522,7 @@ void initSnake(Snake* snake, SDL_Renderer* renderer) {
     snake->y = SCREEN_HEIGHT/2;
     snake->dx = 10;
     snake->dy = 0;
-    snake->length = 12;
+    snake->length = 10;
     snake->score = 0;
 
     // Load textures
@@ -636,8 +653,8 @@ int isGameOver(Snake* snake) {
 
 void generateFood(Food* food) {
     // Generate random positions for food within the game screen
-    food->x = 15 + rand() % (929 - 15 - food->rect.w);  // Adjusted for x-axis within the specified range
-    food->y = 15 + rand() % (529 - 15 - food->rect.h);  // Adjusted for y-axis within the specified range
+    food->x = 16 + rand() % (930 - 16 - food->rect.w);  // Adjusted for x-axis within the specified range
+    food->y = 16 + rand() % (530 - 16 - food->rect.h);  // Adjusted for y-axis within the specified range
     // Adjust to grid for easier handling (optional, depending on game design)
     food->x -= food->x % 10;
     food->y -= food->y % 10;
