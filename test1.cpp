@@ -7,7 +7,7 @@
 const int SCREEN_WIDTH = 960;
 const int SCREEN_HEIGHT = 600;
 
-const int SCREEN_FPS = 5;
+const int SCREEN_FPS = 15;
 const int SCREEN_TICK_PER_FRAME = 1000 / SCREEN_FPS;
 
 void capFrameRate(Uint32 startTicks) {
@@ -317,47 +317,49 @@ int main(int argc, char* args[]) {
             for (int i = 0; i < 4; ++i) {
                 menuRect.y = 140 + i * 80;  // Adjust vertical spacing as needed
                 if (i == selectedMenuItem) {
-                // Highlight selected item
-                SDL_SetTextureColorMod(menuTextures[i], 218, 200, 188);  // Green color for selected item
+                    // Highlight selected item
+                    SDL_SetTextureColorMod(menuTextures[i], 85, 104, 42);  // Green color for selected item
+                    SDL_SetTextureAlphaMod(menuTextures[i], 255);  // Full opacity for selected item
                 } else {
-                // Normal color for other items
-                SDL_SetTextureColorMod(menuTextures[i], 255, 255, 255);  // Light green color
+                    // Normal color for other items
+                    SDL_SetTextureColorMod(menuTextures[i], 121, 130, 59);  // Light green color
+                    SDL_SetTextureAlphaMod(menuTextures[i], 128);  // Semi-transparent for other items
                 }
                 SDL_RenderCopy(renderer, menuTextures[i], NULL, &menuRect);
             }
 
             // Render snakeBig texture gradually
             if (snakeBigPosX < 0) {
-            snakeBigPosX += 5;  // Adjust speed as needed
+            snakeBigPosX += 42;  // Adjust speed as needed
             }
             SDL_Rect snakeBigRect = {snakeBigPosX, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
             SDL_RenderCopy(renderer, snakeBigTexture, NULL, &snakeBigRect);
 
             // Render snakeTree texture gradually
             if (snakeTreePosX < 0) {
-            snakeTreePosX += 5;  // Adjust speed as needed
+            snakeTreePosX += 40;  // Adjust speed as needed
             }
             SDL_Rect snakeTreeRect = {snakeTreePosX, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
             SDL_RenderCopy(renderer, snakeTreeTexture, NULL, &snakeTreeRect);
 
             // Move and render texts sequentially
-            if (startRect.x > 620) {
-            startRect.x -= 8;  // Adjust speed as needed
+            if (startRect.x > 622) {
+            startRect.x -= 37;  // Adjust speed as needed
             }
             SDL_RenderCopy(renderer, startTexture, NULL, &startRect);
 
             if (instructionsRect.x > 550) {
-            instructionsRect.x -= 7;  // Adjust speed as needed
+            instructionsRect.x -= 36;  // Adjust speed as needed
             }
             SDL_RenderCopy(renderer, instructionsTexture, NULL, &instructionsRect);
 
             if (highscoreRect.x > 570) {
-            highscoreRect.x -= 6;  // Adjust speed as needed
+            highscoreRect.x -= 35;  // Adjust speed as needed
             }
             SDL_RenderCopy(renderer, highscoreTexture, NULL, &highscoreRect);
 
             if (exitRect.x > 640) {
-            exitRect.x -= 5;  // Adjust speed as needed
+            exitRect.x -= 34;  // Adjust speed as needed
             }
             SDL_RenderCopy(renderer, exitTexture, NULL, &exitRect);
 
