@@ -7,7 +7,7 @@
 const int SCREEN_WIDTH = 960;
 const int SCREEN_HEIGHT = 600;
 
-const int SCREEN_FPS = 25;
+const int SCREEN_FPS = 5;
 const int SCREEN_TICK_PER_FRAME = 1000 / SCREEN_FPS;
 
 void capFrameRate(Uint32 startTicks) {
@@ -29,6 +29,10 @@ const char* TAIL_UP = "resources/tailUp.png";
 const char* TAIL_DOWN = "resources/tailDown.png";
 const char* TAIL_LEFT = "resources/tailLeft.png";
 const char* TAIL_RIGHT = "resources/tailRight.png";
+const char* LEFT_DOWN = "resources/leftDown.png";
+const char* RIGHT_DOWN = "resources/rightDown.png";
+const char* RIGHT_UP = "resources/rightUp.png";
+const char* LEFT_UP = "resources/leftUp.png";
 
 // Highscore constants
 const char* BACKGROUND_HIGHSCORE = "resources/highBG.png";
@@ -57,6 +61,7 @@ typedef struct {
     SDL_Texture* bodyTexture;
     SDL_Texture* tailTexture;
     SDL_Rect segments[100];
+    int directions[100];
     int length;
     int score;
 } Snake;
@@ -552,10 +557,13 @@ void initSnake(Snake* snake, SDL_Renderer* renderer) {
     snake->tailTexture = loadTexture(renderer, TAIL_RIGHT);
 
     // Initialize segments
-    snake->segments[0].x = snake->x;
-    snake->segments[0].y = snake->y;
-    snake->segments[0].w = 15; // Adjust size as needed
-    snake->segments[0].h = 13; // Adjust size as needed
+    for (int i = 0; i < snake->length; ++i) {
+        snake->segments[i].x = snake->x - i * 15;
+        snake->segments[i].y = snake->y;
+        snake->segments[i].w = 15;
+        snake->segments[i].h = 13;
+        snake->directions[i] = 0; // Initialize all directions to 0
+    }
 }
 
 // Snake game update logic
@@ -563,10 +571,21 @@ void updateSnake(Snake* snake, Food* food) {
     // Update the position of each segment
     for (int i = snake->length - 1; i > 0; --i) {
         snake->segments[i] = snake->segments[i - 1];
+        snake->directions[i] = snake->directions[i - 1]; // Update direction
     }
     // Update head position based on direction
     snake->segments[0].x += snake->dx;
     snake->segments[0].y += snake->dy;
+
+    if (snake->dx > 0) {
+        snake->directions[0] = 1; // Moving right
+    } else if (snake->dx < 0) {
+        snake->directions[0] = 2; // Moving left
+    } else if (snake->dy > 0) {
+        snake->directions[0] = 3; // Moving down
+    } else if (snake->dy < 0) {
+        snake->directions[0] = 4; // Moving up
+    }
 
     // Check if snake eats food
     if (checkCollision(snake, food)) {
@@ -579,16 +598,42 @@ void updateSnake(Snake* snake, Food* food) {
 // Snake game rendering logic
 void renderSnake(Snake* snake, SDL_Renderer* renderer) {
     // Render snake head
-    SDL_Rect headRect = {snake->segments[0].x, snake->segments[0].y, 15, 13}; // Adjust size as needed
+    SDL_Rect headRect = {snake->segments[0].x, snake->segments[0].y, 15, 13};
     SDL_RenderCopy(renderer, snake->headTexture, NULL, &headRect);
 
-    // Render snake body segments
-    for (int i = 1; i < snake->length-1; i++) {
-        SDL_Rect bodyRect = {snake->segments[i].x, snake->segments[i].y, 15, 13}; // Adjust size as needed
-        if (snake->segments[i].x == snake->segments[i - 1].x) {
-            SDL_RenderCopy(renderer, loadTexture(renderer, BODY_VERTICAL), NULL, &bodyRect);
+    // Render snake body segments with joints
+    for (int i = 1; i < snake->length - 1; ++i) {
+        SDL_Rect segmentRect = {snake->segments[i].x, snake->segments[i].y, 15, 13};
+
+        // Determine texture based on direction changes
+        if ((snake->segments[i].y > snake->segments[i - 1].y && snake->segments[i].x == snake->segments[i - 1].x && snake->segments[i].x > snake->segments[i + 1].x && snake->segments[i].y == snake->segments[i + 1].y)
+            || (snake->segments[i].y == snake->segments[i - 1].y && snake->segments[i].x > snake->segments[i - 1].x && snake->segments[i].x == snake->segments[i + 1].x && snake->segments[i].y > snake->segments[i + 1].y)) {
+            SDL_Texture* jointTexture = loadTexture(renderer, RIGHT_UP);
+            SDL_RenderCopy(renderer, jointTexture, NULL, &segmentRect);
+            SDL_DestroyTexture(jointTexture);
+        } else if ((snake->segments[i].y > snake->segments[i - 1].y && snake->segments[i].x == snake->segments[i - 1].x && snake->segments[i].x < snake->segments[i + 1].x && snake->segments[i].y == snake->segments[i + 1].y)
+            || (snake->segments[i].y == snake->segments[i - 1].y && snake->segments[i].x < snake->segments[i - 1].x && snake->segments[i].x == snake->segments[i + 1].x && snake->segments[i].y > snake->segments[i + 1].y)) {
+            SDL_Texture* jointTexture = loadTexture(renderer, LEFT_UP);
+            SDL_RenderCopy(renderer, jointTexture, NULL, &segmentRect);
+            SDL_DestroyTexture(jointTexture);
+        } else if ((snake->segments[i].y < snake->segments[i - 1].y && snake->segments[i].x == snake->segments[i - 1].x && snake->segments[i].x > snake->segments[i + 1].x && snake->segments[i].y == snake->segments[i + 1].y)
+            || (snake->segments[i].y == snake->segments[i - 1].y && snake->segments[i].x > snake->segments[i - 1].x && snake->segments[i].x == snake->segments[i + 1].x && snake->segments[i].y < snake->segments[i + 1].y)) {
+            SDL_Texture* jointTexture = loadTexture(renderer, RIGHT_DOWN);
+            SDL_RenderCopy(renderer, jointTexture, NULL, &segmentRect);
+            SDL_DestroyTexture(jointTexture);
+        } else if ((snake->segments[i].y < snake->segments[i - 1].y && snake->segments[i].x == snake->segments[i - 1].x && snake->segments[i].x < snake->segments[i + 1].x && snake->segments[i].y == snake->segments[i + 1].y)
+            || (snake->segments[i].y == snake->segments[i - 1].y && snake->segments[i].x < snake->segments[i - 1].x && snake->segments[i].x == snake->segments[i + 1].x && snake->segments[i].y < snake->segments[i + 1].y)) {
+            SDL_Texture* jointTexture = loadTexture(renderer, LEFT_DOWN);
+            SDL_RenderCopy(renderer, jointTexture, NULL, &segmentRect);
+            SDL_DestroyTexture(jointTexture);
         } else {
-            SDL_RenderCopy(renderer, loadTexture(renderer, BODY_HORIZONTAL), NULL, &bodyRect);
+            // Render snake body segments
+            SDL_Rect bodyRect = {snake->segments[i].x, snake->segments[i].y, 15, 13}; // Adjust size as needed
+            if (snake->segments[i].x == snake->segments[i - 1].x) {
+                SDL_RenderCopy(renderer, loadTexture(renderer, BODY_VERTICAL), NULL, &bodyRect);
+            } else {
+                SDL_RenderCopy(renderer, loadTexture(renderer, BODY_HORIZONTAL), NULL, &bodyRect);
+            }
         }
     }
 
@@ -609,6 +654,7 @@ void renderSnake(Snake* snake, SDL_Renderer* renderer) {
     SDL_RenderCopy(renderer, snake->tailTexture, NULL, &snake->segments[tailIdx]);
     SDL_DestroyTexture(tailTexture);
 }
+
 
 // Handle snake game events
 void handleSnakeEvents(SDL_Event* e, Snake* snake, SDL_Renderer* renderer) {
