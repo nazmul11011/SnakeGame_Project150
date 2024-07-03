@@ -110,7 +110,7 @@ int main(int argc, char* args[]) {
     }
 
     // Load font
-    largeFont = TTF_OpenFont("resources/omega-ruby.ttf", 80); // Load the larger font for "SNAKE GAME"
+    largeFont = TTF_OpenFont("resources/SuperMario.ttf", 80); // Load the larger font for "SNAKE GAME"
     gothicFont = TTF_OpenFont("resources/gothic.ttf", 22);
     gothicFontLarge = TTF_OpenFont("resources/gothic.ttf", 40);
     font = TTF_OpenFont("resources/grobold.ttf", 40);
@@ -135,7 +135,7 @@ int main(int argc, char* args[]) {
     SDL_Color textColorBlue = {93, 93, 173}; // blue color
 
     // Render "SNAKE GAME" text
-    SDL_Rect snakeGameRect = {480, 62, 0, 0}; // Adjust position as needed
+    SDL_Rect snakeGameRect = {396, 51, 0, 0}; // Adjust position as needed
     SDL_Texture* snakeGameTexture = renderText(renderer, largeFont, "SNAKE GAME", textColorBlue, &snakeGameRect);
 
     SDL_Rect startRect = {SCREEN_WIDTH, 140, 0, 0};
@@ -365,7 +365,7 @@ int main(int argc, char* args[]) {
             // Render the score on the game over screen
             char scoreText[50];
             sprintf(scoreText, "Score: %d", snake.score);
-            SDL_Rect gameOverScoreRect = {400, 300, 0, 0}; // Adjust position as needed
+            SDL_Rect gameOverScoreRect = {390, 255, 0, 0}; // Adjust position as needed
             SDL_Texture* gameOverScoreTexture = renderText(renderer, gothicFontLarge, scoreText, textColorWhite, &gameOverScoreRect);
             SDL_RenderCopy(renderer, gameOverScoreTexture, NULL, &gameOverScoreRect);
             SDL_DestroyTexture(gameOverScoreTexture);
