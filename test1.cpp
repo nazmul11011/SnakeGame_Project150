@@ -17,7 +17,7 @@ void capFrameRate(Uint32 startTicks) {
     }
 }
 
-// Snake game constants
+// Snake game constants(resources like background, snake texture, homepage images, high scores images)
 const char* BACKGROUND_GAME = "resources/bgS.png";
 const char* HEAD_UP = "resources/headUp.png";
 const char* HEAD_DOWN = "resources/headDown.png";
@@ -33,11 +33,10 @@ const char* LEFT_DOWN = "resources/leftDown.png";
 const char* RIGHT_DOWN = "resources/rightDown.png";
 const char* RIGHT_UP = "resources/rightUp.png";
 const char* LEFT_UP = "resources/leftUp.png";
-
-// Highscore constants
+// Highscore constant(Background image)
 const char* BACKGROUND_HIGHSCORE = "resources/highBG.png";
 
-// Function prototypes
+// Rendering functions for initialize texture, font, game and load scores from txt file
 int initSDL(SDL_Window **window, SDL_Renderer **renderer);
 SDL_Texture* loadTexture(SDL_Renderer *renderer, const char *filePath);
 SDL_Texture* renderText(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color color, SDL_Rect *rect);
@@ -66,9 +65,11 @@ typedef struct {
     int score;
 } Snake;
 
+// home page items
 int highScore = 0;
 int selectedMenuItem = 0;  // 0 for START, 1 for INSTRUCTIONS, 2 for HIGH SCORE, 3 for EXIT
 
+// function to initialize the snake game
 void initSnake(Snake* snake, SDL_Renderer* renderer);
 void updateSnake(Snake* snake, Food* food);
 void renderSnake(Snake* snake, SDL_Renderer* renderer);
@@ -121,7 +122,7 @@ int main(int argc, char* args[]) {
     }
 
     // Load font
-    largeFont = TTF_OpenFont("resources/SuperMario.ttf", 80); // Load the larger font for "SNAKE GAME"
+    largeFont = TTF_OpenFont("resources/SuperMario.ttf", 80); // Load the larger font for "SNAKE GAME" in home page
     gothicFont = TTF_OpenFont("resources/gothic.ttf", 22);
     gothicFontLarge = TTF_OpenFont("resources/gothic.ttf", 40);
     font = TTF_OpenFont("resources/grobold.ttf", 40);
@@ -140,15 +141,15 @@ int main(int argc, char* args[]) {
     }
 
     // Render texts
-    SDL_Color textColorWhite = {255, 255, 255}; // White color
-    SDL_Color textColorGreen = {121, 175, 107}; // Green color
-    SDL_Color textColorRed = {255, 0, 0, 255}; // Red color
+    SDL_Color textColorWhite = {255, 255, 255}; // white color
+    SDL_Color textColorGreen = {121, 175, 107}; // green color
+    SDL_Color textColorRed = {255, 0, 0, 255}; // red color
     SDL_Color textColorBlue = {93, 93, 173}; // blue color
 
-    // Render "SNAKE GAME" text
+    // Render "SNAKE GAME" text in front page
     SDL_Rect snakeGameRect = {396, 51, 0, 0}; // Adjust position as needed
     SDL_Texture* snakeGameTexture = renderText(renderer, largeFont, "SNAKE GAME", textColorBlue, &snakeGameRect);
-
+    // Options
     SDL_Rect startRect = {SCREEN_WIDTH, 140, 0, 0};
     startTexture = renderText(renderer, font, "START", textColorGreen, &startRect);
 
@@ -173,6 +174,7 @@ int main(int argc, char* args[]) {
     // Event handler
     SDL_Event e;
 
+    // **Main Snake Game Starts here**
     // Snake game state
     Snake snake;
     initSnake(&snake, renderer);
@@ -184,7 +186,7 @@ int main(int argc, char* args[]) {
     food.rect.h = 15;  // Adjust size as needed
     generateFood(&food);  // Generate initial food position
 
-    // While application is running
+    // While loop to run the game
     while (!quit) {
         startTicks = SDL_GetTicks();
         // Handle events on queue
@@ -239,7 +241,7 @@ int main(int argc, char* args[]) {
                 handleSnakeEvents(&e, &snake, renderer);
             }
 
-            // Handle ESC key to exit sub-menus
+            // Handle ESC key to exit from sub-menus
             if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
                 if (showInstructions) {
                     showInstructions = 0;
@@ -279,7 +281,7 @@ int main(int argc, char* args[]) {
             renderSnake(&snake, renderer);
             renderFood(&food, renderer);
 
-            // Render score
+            // Render score in bottom
             char scoreText[50];
             sprintf(scoreText, "Score: %d", snake.score);
             SDL_Rect scoreRect = { 10, 565, 0, 0 }; // Adjust position as needed
@@ -363,7 +365,7 @@ int main(int argc, char* args[]) {
             }
             SDL_RenderCopy(renderer, exitTexture, NULL, &exitRect);
 
-            // Render "SNAKE GAME" text on top of "START"
+            // Render big text "SNAKE GAME" on top of "START" option
             SDL_RenderCopy(renderer, snakeGameTexture, NULL, &snakeGameRect);
         }
 
