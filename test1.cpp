@@ -107,7 +107,7 @@ int main(int argc, char* args[]) {
     // Load textures
     gameOverTexture = IMG_LoadTexture(renderer, "resources/overBG.png");
     backgroundTexture = loadTexture(renderer, "resources/bg.png");
-    snakeBigTexture = loadTexture(renderer, "resources/snakeBig.png");
+    snakeBigTexture = loadTexture(renderer, "resources/snakeBig1.png");
     snakeTreeTexture = loadTexture(renderer, "resources/snakeTree.png");
     helpTexture = loadTexture(renderer, "resources/help.png");
     if (backgroundTexture == NULL || snakeBigTexture == NULL || snakeTreeTexture == NULL || helpTexture == NULL || gameOverTexture == NULL) {
