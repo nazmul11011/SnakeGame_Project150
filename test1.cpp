@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_mixer.h>
 #include <stdio.h>
 
 // Screen dimension constants
@@ -65,11 +66,11 @@ typedef struct {
     int score;
 } Snake;
 
-// home page items
+// Home page items
 int highScore = 0;
 int selectedMenuItem = 0;  // 0 for START, 1 for INSTRUCTIONS, 2 for HIGH SCORE, 3 for EXIT
 
-// function to initialize the snake game
+// Function to initialize the snake game
 void initSnake(Snake* snake, SDL_Renderer* renderer);
 void updateSnake(Snake* snake, Food* food);
 void renderSnake(Snake* snake, SDL_Renderer* renderer);
@@ -97,15 +98,44 @@ int main(int argc, char* args[]) {
     TTF_Font* gothicFontLarge = NULL;
     TTF_Font* largeFont = NULL;
 
+
+    // ** Music for intro and game(not working due to memory allocation)
+    // // Declare Mix_Music pointers for menu and gameplay
+    // Mix_Music *menuMusic = NULL;
+    // Mix_Music *gameMusic = NULL;
+
+    // // Initialize SDL_mixer
+    // if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0){
+    //     printf("SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError());
+    //     return -1;
+    // }
+
+    // // Load music files
+    // menuMusic = Mix_LoadMUS("resources/intro.mp3");
+    // if (!menuMusic){
+    //     printf("Failed to load menu music! SDL_mixer Error: %s\n", Mix_GetError());
+    // }
+
+    // gameMusic = Mix_LoadMUS("resources/game.mp3");
+    // if (!gameMusic){
+    //     printf("Failed to load game music! SDL_mixer Error: %s\n", Mix_GetError());
+    // }
+
+    // // Start menu music by default
+    // if (Mix_PlayMusic(menuMusic, -1) == -1){
+    //     printf("Mix_PlayMusic failed: %s\n", Mix_GetError());
+    // }
+
+
     // Initialize SDL
     if (initSDL(&window, &renderer) != 0) {
         return 1;
     }
 
-    // Load the high score at the start of the program
+    // Load the high score image at the start of program
     loadHighScore("resources/highscore.txt");
 
-    // Load textures
+    // Load textures gameover and front page
     gameOverTexture = IMG_LoadTexture(renderer, "resources/overBG.png");
     backgroundTexture = loadTexture(renderer, "resources/bg.png");
     snakeBigTexture = loadTexture(renderer, "resources/snakeBig1.png");
@@ -162,7 +192,7 @@ int main(int argc, char* args[]) {
     SDL_Rect exitRect = {SCREEN_WIDTH, 380, 0, 0};
     exitTexture = renderText(renderer, font, "EXIT", textColorGreen, &exitRect);
 
-    // Main loop flag
+    // Main page loop flag
     int quit = 0;
     int showInstructions = 0;
     int showSnakeGame = 0;
@@ -181,12 +211,12 @@ int main(int argc, char* args[]) {
 
     // Initialize Food
     Food food;
-    food.texture = loadTexture(renderer, "resources/food.png");  // Adjust path as needed
-    food.rect.w = 15;  // Adjust size as needed
-    food.rect.h = 15;  // Adjust size as needed
+    food.texture = loadTexture(renderer, "resources/food.png");  // Food image location
+    food.rect.w = 15;  // Food initial position
+    food.rect.h = 15;  // Food initial position
     generateFood(&food);  // Generate initial food position
 
-    // While loop to run the game
+    // While loop to run full the game
     while (!quit) {
         startTicks = SDL_GetTicks();
         // Handle events on queue
@@ -215,6 +245,11 @@ int main(int argc, char* args[]) {
                         switch (selectedMenuItem) {
                             case 0:  // START selected
                                 showSnakeGame = 1;
+                                // Mix_HaltMusic(); // Stop menu music
+                                // if (Mix_PlayMusic(gameMusic, -1) == -1)
+                                // {
+                                //     printf("Failed to play game music: %s\n", Mix_GetError());
+                                // }
                                 initSnake(&snake, renderer);
                                 generateFood(&food);
                                 break;
@@ -231,6 +266,17 @@ int main(int argc, char* args[]) {
                                 break;
                         }
                         break;
+                    // case SDLK_ESCAPE:
+                    //     if (showSnakeGame)
+                    //     {
+                    //         showSnakeGame = 0;
+                    //         Mix_HaltMusic(); // Stop game music
+                    //         if (Mix_PlayMusic(menuMusic, -1) == -1)
+                    //         {
+                    //             printf("Failed to play menu music: %s\n", Mix_GetError());
+                    //         }
+                    //     }
+                    //     break;
                     default:
                         break;
                 }
@@ -427,6 +473,9 @@ int main(int argc, char* args[]) {
     }
 
     // Free resources and close SDL
+    // Mix_FreeMusic(menuMusic);
+    // Mix_FreeMusic(gameMusic);
+    // Mix_CloseAudio();
     SDL_DestroyTexture(gameOverTexture);
     SDL_DestroyTexture(backgroundTexture);
     SDL_DestroyTexture(snakeBigTexture);
@@ -710,11 +759,11 @@ void handleSnakeEvents(SDL_Event* e, Snake* snake, SDL_Renderer* renderer) {
 // Check if game over (e.g., snake hits boundary or itself)
 int isGameOver(Snake* snake) {
     // Implement game over conditions
-    // Example: hitting screen boundary
+    // Condition 1: hitting screen boundary
     if (snake->segments[0].x < 15 || snake->segments[0].x >= 929 || snake->segments[0].y < 15 || snake->segments[0].y >= 529) {
         return 1;
     }
-    // Example: hitting itself (for loop through snake segments)
+    // Condition 2: hitting itself (for loop through snake segments)
     for (int i = 1; i < snake->length; ++i) {
         if (snake->segments[0].x == snake->segments[i].x && snake->segments[0].y == snake->segments[i].y) {
             return 1;
