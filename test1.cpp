@@ -8,8 +8,13 @@
 const int SCREEN_WIDTH = 960;
 const int SCREEN_HEIGHT = 600;
 
+// Game loading speed FPS
 const int SCREEN_FPS = 15;
 const int SCREEN_TICK_PER_FRAME = 1000 / SCREEN_FPS;
+
+int bonusTimer=0;
+Uint32 bonusStart=0;
+Uint32 bonusDuration=3000;
 
 void capFrameRate(Uint32 startTicks) {
     Uint32 frameTicks = SDL_GetTicks() - startTicks;
@@ -339,16 +344,27 @@ int main(int argc, char* args[]) {
             // Check for collision with bonus food
             if (showSnakeGame && bonusActive && checkBonusFoodCollision(&snake, &bonus))
             {
-               // snake.length += 5; // Bonus food gives more length
-                snake.score += 3;  // Increase score for bonus food
-                bonusActive = 0;   // Deactivate bonus food
+               // snake.length += 3;
+                snake.score += 3;
+                bonusActive = 0;
             }
 
-            // Generate bonus food occasionally (example condition)
-            if (!bonusActive && snake.score % 10 == 0 && snake.score > 0)
-            { // Appears every 5 points
+            // Generate bonus food at a difference
+            if (!bonusActive && snake.score % 10 == 0 && snake.score > 0) //10 point difference
+            { 
                 generateBonusFood(&bonus);
                 bonusActive = 1;
+                bonusStart = SDL_GetTicks();
+            }
+
+            //Bonus timer
+            if (bonusActive)
+            {
+                Uint32 currentTime = SDL_GetTicks();
+                if (currentTime - bonusStart > bonusDuration)
+                {
+                    bonusActive = 0; // Deactivate bonus food
+                }
             }
 
             // Update snake position and state
@@ -475,7 +491,7 @@ int main(int argc, char* args[]) {
             }
 
             printf("Game Over! Length of snake: %d\n", snake.length);
-            printf("Your score: %d\n", snake.score);  // Print final score
+            printf("Your score: %d\n", snake.score);  // Print final score in terminal
 
             SDL_Delay(1000);
 
@@ -506,8 +522,8 @@ int main(int argc, char* args[]) {
                             gameOver = 0;
                             // Reset the snake for a new game
                             initSnake(&snake, renderer);
-                            generateFood(&food); // Generate new food for the next game
-                            SDL_Delay(100); // Delay for a moment before restarting
+                            generateFood(&food); // Generate new food -> the next game
+                            SDL_Delay(100); // Delay 0.1sec before restarting
                         }
                     }
                 }
@@ -547,34 +563,34 @@ int main(int argc, char* args[]) {
 int initSDL(SDL_Window **window, SDL_Renderer **renderer) {
     // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        printf("Function:initSDL, SDL_init failed,Error: %s\n", SDL_GetError());
         return 1;
     }
 
     // Create window
     *window = SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     if (*window == NULL) {
-        printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
+        printf("Function:initSDL, Window creation failed,Error: %s\n", SDL_GetError());
         return 1;
     }
 
     // Create renderer for window
     *renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED);
     if (*renderer == NULL) {
-        printf("Renderer could not be created! SDL Error: %s\n", SDL_GetError());
+        printf("Function:initSDL, SDL_createRenderer failed,Error: %s\n", SDL_GetError());
         return 1;
     }
 
     // Initialize SDL_image
     int imgFlags = IMG_INIT_PNG;
     if (!(IMG_Init(imgFlags) & imgFlags)) {
-        printf("SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError());
+        printf("Function:initSDL, SDL_image failed,Error: %s\n", IMG_GetError());
         return 1;
     }
 
     // Initialize SDL_ttf
     if (TTF_Init() == -1) {
-        printf("SDL_ttf could not initialize! SDL_ttf Error: %s\n", TTF_GetError());
+        printf("Function:initSDL, SDL_ttf failed,Error: %s\n", TTF_GetError());
         return 1;
     }
 
@@ -583,17 +599,17 @@ int initSDL(SDL_Window **window, SDL_Renderer **renderer) {
 
 // Function to load texture from file
 SDL_Texture* loadTexture(SDL_Renderer *renderer, const char *filePath) {
-    // Load image at specified path
+    // Load image
     SDL_Surface* surface = IMG_Load(filePath);
     if (surface == NULL) {
-        printf("Unable to load image %s! SDL_image Error: %s\n", filePath, IMG_GetError());
+        printf("Function:loadTexture, Surface image loading failed %s! Error: %s\n", filePath, IMG_GetError());
         return NULL;
     }
 
     // Create texture from surface pixels
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     if (texture == NULL) {
-        printf("Unable to create texture from %s! SDL Error: %s\n", filePath, SDL_GetError());
+        printf("Function:loadTexture, Texture creation failed %s! Error: %s\n", filePath, SDL_GetError());
     }
 
     // Free loaded surface
@@ -607,14 +623,14 @@ SDL_Texture* renderText(SDL_Renderer *renderer, TTF_Font *font, const char *text
     // Render text surface
     SDL_Surface* surface = TTF_RenderText_Solid(font, text, color);
     if (surface == NULL) {
-        printf("Unable to render text surface! SDL_ttf Error: %s\n", TTF_GetError());
+        printf("Function:renderText, Surface creation failed,Error: %s\n", TTF_GetError());
         return NULL;
     }
 
     // Create texture from surface pixels
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     if (texture == NULL) {
-        printf("Unable to create texture from rendered text! SDL Error: %s\n", SDL_GetError());
+        printf("Function:renderText, texture creation failed, Error: %s\n", SDL_GetError());
     }
 
     // Get width and height of surface
