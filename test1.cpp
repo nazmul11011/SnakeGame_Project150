@@ -47,12 +47,18 @@ void displayHighscore(SDL_Renderer *renderer, TTF_Font *font);
 void loadHighScore(const char *filePath);
 void saveHighScore(const char *filePath);
 
-// Snake game state
+// Snake game structures
 typedef struct {
     int x, y;
     SDL_Texture* texture;
     SDL_Rect rect;
 } Food;
+
+typedef struct {
+    int x, y;
+    SDL_Texture* texture;
+    SDL_Rect rect;
+} bonusFood;
 
 typedef struct {
     int x, y;
@@ -77,8 +83,11 @@ void renderSnake(Snake* snake, SDL_Renderer* renderer);
 void handleSnakeEvents(SDL_Event* e, Snake* snake, SDL_Renderer* renderer);
 int isGameOver(Snake* snake);
 void generateFood(Food* food);
+void generateBonusFood(bonusFood* bonus);
 int checkCollision(Snake* snake, Food* food);
+int checkBonusFoodCollision(Snake* snake, bonusFood* bonus);
 void renderFood(Food* food, SDL_Renderer* renderer);
+void renderBonusFood(bonusFood* bonus, SDL_Renderer* renderer) ;
 
 int main(int argc, char* args[]) {
     Uint32 startTicks;
@@ -209,12 +218,20 @@ int main(int argc, char* args[]) {
     Snake snake;
     initSnake(&snake, renderer);
 
+    int bonusActive=0;
+
     // Initialize Food
     Food food;
     food.texture = loadTexture(renderer, "resources/food.png");  // Food image location
     food.rect.w = 15;  // Food initial position
     food.rect.h = 15;  // Food initial position
     generateFood(&food);  // Generate initial food position
+
+    bonusFood bonus;
+    bonus.rect.w = rand() % SCREEN_WIDTH;  // grid_width is the horizontal game area size
+    bonus.rect.h = rand() % SCREEN_HEIGHT; // grid_height is the vertical game area size
+    bonus.texture = loadTexture(renderer, "resources/bonusFood.png");
+    generateBonusFood(&bonus);
 
     // While loop to run full the game
     while (!quit) {
@@ -308,40 +325,65 @@ int main(int argc, char* args[]) {
         // Update game state and render based on current screen state
         if (showInstructions) {
             renderInstructions(renderer, helpTexture);
-        } else if (showSnakeGame  && !gameOver) {
+        }
+        else if (showSnakeGame && !gameOver)
+        {
             // Check for collision with food
-            if (showSnakeGame && checkCollision(&snake, &food)) {
-                snake.length += 2;  // Increase snake's length or update score
-                snake.score += 1;  // Increase score when snake eats food
-                generateFood(&food);  // Generate new food
+            if (showSnakeGame && checkCollision(&snake, &food))
+            {
+                snake.length += 2;   // Increase snake's length
+                snake.score += 1;    // Increase score when snake eats food
+                generateFood(&food); // Generate new food
+            }
+
+            // Check for collision with bonus food
+            if (showSnakeGame && bonusActive && checkBonusFoodCollision(&snake, &bonus))
+            {
+               // snake.length += 5; // Bonus food gives more length
+                snake.score += 3;  // Increase score for bonus food
+                bonusActive = 0;   // Deactivate bonus food
+            }
+
+            // Generate bonus food occasionally (example condition)
+            if (!bonusActive && snake.score % 10 == 0 && snake.score > 0)
+            { // Appears every 5 points
+                generateBonusFood(&bonus);
+                bonusActive = 1;
             }
 
             // Update snake position and state
             updateSnake(&snake, &food);
 
-            // Render snake and food
-            SDL_Texture* gameBackground = loadTexture(renderer, BACKGROUND_GAME);
+            // Render game background
+            SDL_Texture *gameBackground = loadTexture(renderer, BACKGROUND_GAME);
             SDL_RenderCopy(renderer, gameBackground, NULL, NULL);
             SDL_DestroyTexture(gameBackground);
 
+            // Render snake, food, and bonus food (if active)
             renderSnake(&snake, renderer);
             renderFood(&food, renderer);
+            if (bonusActive){
+                renderBonusFood(&bonus, renderer);
+            }
 
-            // Render score in bottom
+            // Render score at the bottom
             char scoreText[50];
             sprintf(scoreText, "Score: %d", snake.score);
-            SDL_Rect scoreRect = { 10, 565, 0, 0 }; // Adjust position as needed
-            SDL_Texture* scoreTexture = renderText(renderer, gothicFont, scoreText, textColorRed, &scoreRect);
+            SDL_Rect scoreRect = {10, 565, 0, 0}; // Adjust position as needed
+            SDL_Texture *scoreTexture = renderText(renderer, gothicFont, scoreText, textColorRed, &scoreRect);
             SDL_RenderCopy(renderer, scoreTexture, NULL, &scoreRect);
             SDL_DestroyTexture(scoreTexture);
 
+            // Render high score
             char highscoreText[50];
             sprintf(highscoreText, "Highscore: %d", highScore);
             SDL_Rect highscoreTextRect = {800, 565, 0, 0}; // Example position
-            SDL_Texture* highscoreTextTexture = renderText(renderer, gothicFont, highscoreText, textColorRed, &highscoreTextRect);
+            SDL_Texture *highscoreTextTexture = renderText(renderer, gothicFont, highscoreText, textColorRed, &highscoreTextRect);
             SDL_RenderCopy(renderer, highscoreTextTexture, NULL, &highscoreTextRect);
             SDL_DestroyTexture(highscoreTextTexture);
-        } else if (showHighscore) {
+        }
+        else if (showHighscore)
+        {
             // Render highscore background
             SDL_Texture* highscoreBackground = loadTexture(renderer, BACKGROUND_HIGHSCORE);
             SDL_RenderCopy(renderer, highscoreBackground, NULL, NULL);
@@ -354,7 +396,9 @@ int main(int argc, char* args[]) {
             SDL_Texture* highscoreTextTexture = renderText(renderer, font, highscoreText, textColorRed, &highscoreTextRect);
             SDL_RenderCopy(renderer, highscoreTextTexture, NULL, &highscoreTextRect);
             SDL_DestroyTexture(highscoreTextTexture);
-        } else {
+        }
+        else
+        {
             // Render main menu
             SDL_RenderCopy(renderer, backgroundTexture, NULL, NULL);
 
@@ -708,7 +752,6 @@ void renderSnake(Snake* snake, SDL_Renderer* renderer) {
     SDL_DestroyTexture(tailTexture);
 }
 
-
 // Handle snake game events
 void handleSnakeEvents(SDL_Event* e, Snake* snake, SDL_Renderer* renderer) {
     // Handle key press events for snake direction
@@ -772,13 +815,30 @@ int isGameOver(Snake* snake) {
     return 0;
 }
 
+// Generate random positions for food within the game screen
 void generateFood(Food* food) {
-    // Generate random positions for food within the game screen
     food->x = 16 + rand() % (928 - 16 - food->rect.w);  // Adjusted for x-axis within the specified range
     food->y = 16 + rand() % (528 - 16 - food->rect.h);  // Adjusted for y-axis within the specified range
-    // Adjust to grid for easier handling (optional, depending on game design)
+    // Food generation grid
     food->x -= food->x % 10;
     food->y -= food->y % 10;
+}
+
+// Generate random positions for bonus food within the game screen
+void generateBonusFood(bonusFood* bonus) {
+    bonus->x = 16 + rand() % (928 - 16 - bonus->rect.w); // x-axis range
+    bonus->y = 16 + rand() % (528 - 16 - bonus->rect.h); // y-axis range
+
+    // Bonus food generation grid
+    bonus->x -= bonus->x % 10;
+    bonus->y -= bonus->y % 10;
+
+    bonus->rect.w = 15; // Image width
+    bonus->rect.h = 15; // Image height
+
+    // Update the rect position based on the new coordinates
+    bonus->rect.x = bonus->x;
+    bonus->rect.y = bonus->y;
 }
 
 int checkCollision(Snake* snake, Food* food) {
@@ -792,10 +852,28 @@ int checkCollision(Snake* snake, Food* food) {
     return 0;
 }
 
+int checkBonusFoodCollision(Snake* snake, bonusFood* bonus) {
+    // Check if the snake's head collides with the bonus food
+    if (snake->segments[0].x < bonus->x + bonus->rect.w &&
+        snake->segments[0].x + snake->segments[0].w > bonus->x &&
+        snake->segments[0].y < bonus->y + bonus->rect.h &&
+        snake->segments[0].y + snake->segments[0].h > bonus->y) {
+        return 1; // Collision detected
+    }
+    return 0; // No collision
+}
+
 void renderFood(Food* food, SDL_Renderer* renderer) {
     SDL_Rect destRect = { food->x, food->y, food->rect.w, food->rect.h };
     SDL_RenderCopy(renderer, food->texture, NULL, &destRect);
 }
+void renderBonusFood(bonusFood* bonus, SDL_Renderer* renderer) {
+    // Create a destination rectangle based on the bonus food's position and dimensions
+    SDL_Rect destRect = { bonus->x, bonus->y, bonus->rect.w, bonus->rect.h };
+    // Render the bonus food texture
+    SDL_RenderCopy(renderer, bonus->texture, NULL, &destRect);
+}
+
 
 void loadHighScore(const char *filePath) {
     FILE *file = fopen(filePath, "r");
