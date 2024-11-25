@@ -1,0 +1,8 @@
+window size 960, 600
+"START": (startTextPosX, 140)
+"INSTRUCTIONS": (instructTextPosX, 220)
+"HIGHSCORE": (highscoreTextPosX, 300)
+"EXIT": (exitTextPosX, 380)
+
+RIGHT UP****
+DOWN LEFT****
